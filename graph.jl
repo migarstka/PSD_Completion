@@ -10,10 +10,50 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         adjacencyList::Array{Array{Int64,1}}
         ordering::Array{Int64}
         reverseOrder::Array{Int64}
-         #constructor
 
-        function Graph(adjacencyList)
+         #constructor for adjacencylist input
+        function Graph(adjacencyList::Array{Array{Float64}})
             ordering = collect(1:size(adjacencyList,1))
+            new(adjacencyList,ordering)
+        end
+
+        # constructor for input matrix (dense data type)
+        function Graph(A::Array{Float64})
+            println("Es")
+            if A != A'
+                error("Please input a symmetric matrix.")
+            end
+            N = size(A,1)
+            ordering = collect(1:1:N)
+            adjacencyList = [Int64[] for i=1:N]
+            for j = 1:N-1
+                for i=j+1:N
+                    if A[i,j] != 0
+                        push!(adjacencyList[i],j)
+                        push!(adjacencyList[j],i)
+                    end
+                end
+            end
+            new(adjacencyList,ordering)
+        end
+
+        # constructor for input matrix (sparse data type)
+        function Graph(A::Array{Float64})
+            println("Es")
+            if A != A'
+                error("Please input a symmetric matrix.")
+            end
+            N = size(A,1)
+            ordering = collect(1:1:N)
+            adjacencyList = [Int64[] for i=1:N]
+            for j = 1:N-1
+                for i=j+1:N
+                    if A[i,j] != 0
+                        push!(adjacencyList[i],j)
+                        push!(adjacencyList[j],i)
+                    end
+                end
+            end
             new(adjacencyList,ordering)
         end
     end
@@ -88,16 +128,7 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         for i = N:-1:1
             # find unvisited vertex of maximum weight
             unvisited_weights = weights.*unvisited
-            if i == N
-                v = 9
-            elseif i == N-1
-                v = 3
-            elseif i == N-2
-                v = 5
-            else
-                v = indmax(unvisited_weights)
-            end
-            println("V: $(v)")
+            v = indmax(unvisited_weights)
             perfectOrdering[v] = i
             unvisited[v] = 0
 
@@ -108,12 +139,10 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
             else
                 S = reachableVertices(g,v,0,1,copy(unvisited),weights)
             end
-            @show(i,S)
             # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
             for w in S
                 weights[w]+=1
                 if !in(w,g.adjacencyList[v])
-                    println("i=$(i), w=$(w), v=$(v) New Edge found!")
                     push!(F,[w,v])
                 end
             end
@@ -138,9 +167,6 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         return nothing
     end
 
-    # pseudocode for finding all vertices that have an unnumbered path with stated properties
-    # TODO: Find a way to terminate algorithm, i.e. update a local processed vertices variable
-    # work with a copied version of unvisited
     function reachableVertices(g,v,refweight,depth,unvisited,weights)
         # initialize set of reachable vertices (direct or indirect neighbors)
         r = []
@@ -150,16 +176,10 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
             return r
         end
 
-        # if depth == 1
-        #     r = vcat(r,unvisitedNeighbors)
-        #     unvisited[unvisitedNeighbors] = 0
-        # end
-
         for w in unvisitedNeighbors
             # check again here since might been already checked at a lower depth, i.e. unvisited variable was modified
             if unvisited[w] == 1
                 unvisited[w] = 0
-
                 if depth == 1
                     r = vcat(r,w)
                     refweight = weights[w]
@@ -183,10 +203,7 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
                     r = union(r,w)
                 end
             end
-
         end
-
-#        r = union(r,unvisitedNeighbors)
         return r
     end
 
