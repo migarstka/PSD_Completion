@@ -27,7 +27,7 @@ nn = 1
 
                 # find chordal extension and perfect elimination ordering
                    # println(g)
-                    mcsmSearch(g)
+                    mcsmSearch!(g)
                     @test begin
                         res = isPerfectOrdering(g) == true
                         if !res
