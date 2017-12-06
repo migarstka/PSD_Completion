@@ -101,12 +101,6 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         return higherNeighbors
     end
 
-        function findLowerNeighbors(g::Graph,nodeNumber::Int64)
-        order = g.ordering[nodeNumber]
-        neighbors = g.adjacencyList[nodeNumber]
-        lowerNeighbors = neighbors[find(f->f<order,g.ordering[neighbors])]
-        return lowerNeighbors
-    end
 
     # performs a maximum cardinality search and updates the ordering to the graph (only perfect elim. ordering if graph is chordal)
     function mcsSearch(g::Graph)
@@ -152,16 +146,16 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
             v = indmax(unvisited_weights)
             perfectOrdering[v] = i
             unvisited[v] = 0
-            println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
+            #println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
             # find all unvisited vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
             # in the first step there will be no valid path, therefore choose S to be the direct neighbors
             if i == N
                 S = filter(j->unvisited[j]==1,g.adjacencyList[v])
             else
-                anchestors = v
-                S = []
-                S = reachableVertices(S,g,v,0,1,copy(unvisited),weights,paths,anchestors)
-                println("S=$(S) of vertex $(v)")
+                anchestors = [v]
+                S = Array{Int64}[]
+                S = reachableVertices(S,g,v,1,copy(unvisited),weights,anchestors)
+               # println("S=$(S) of vertex $(v)")
             end
             # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
             for w in S
@@ -190,11 +184,11 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         return nothing
     end
 
-    function reachableVertices(r, g,v,refweight,depth,unvisited,weights,paths,anchestors)
+    function reachableVertices(r, g,v,depth,unvisited,weights,anchestors)
         # initialize set of reachable vertices (direct or indirect neighbors)
         # n: neighbors of v
-        doPrint = true
-        doPrint && println("    "^depth * "reachableVertices(v=$(v),refweight=$(refweight),depth=$(depth),unvisited=$(unvisited),weights=$(weights))\n")
+        doPrint = false
+        doPrint && println("    "^depth * "reachableVertices(v=$(v),depth=$(depth),unvisited=$(unvisited),weights=$(weights))\n")
         unvisitedNeighbors = filter(i->unvisited[i]==1,g.adjacencyList[v])
         if size(unvisitedNeighbors,1) == 0
             doPrint && println("    "^depth *"End reached at vertex $(v)\n")
@@ -213,7 +207,6 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         # direct unvisited neighbors are always added
         if depth == 1
             r = vcat(r,unvisitedNeighbors)
-            #refweight = weights[v]
         end
 
 
@@ -221,85 +214,58 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         doPrint &&  println("    "^depth *"after unvisitedNeighbors=$(unvisitedNeighbors)\n")
 
         for w in unvisitedNeighbors
-            doPrint &&  println("    "^depth *"Check w=$(w) of v=$(v), weights(w)=$(weights[w]),weights(v)=$(weights[v]), refweight=$(refweight)\n")
+            doPrint &&  println("    "^depth *"Check w=$(w) of v=$(v), weights(w)=$(weights[w]),weights(v)=$(weights[v])\n")
 
             # check again here since might been already checked at a lower depth, i.e. unvisited variable was modified
             unvisited[w] = 0
 
             # case that we have a sequence w(xi) < w(w), w(target)
-            if weights[w] > weights[v]
-                if weights[w] > refweight
-                    push!(r,w)
-                    refweight = weights[w]
+            if depth > 1
+                doPrint &&  println("    "^depth *"validpath before w=$(w), weights(w)=$(weights[w]),anchestors=$(anchestors)\n")
+                if validPath(w,weights,anchestors)
+                    # prevent adding a vertex twice if he has two valid paths
+                    if !in(w,r)
+                        push!(r,w)
+                    end
                 end
+            end
+
             # else
             #     if depth > 1 #or maybe > 2, means we tried this particular path for this vertex
             #         push!(paths[v],anchestors)
             #     end
-            end
+            #end
             # sequence of vertices to reach w
-            #push!(anchestors,v)
-            doPrint && println("    "^depth *"in, refweight=$(refweight), r=$(r), w=$(w), unvisited=$(unvisited)\n")
-            r = reachableVertices(r,g,w,refweight,depth+1,copy(unvisited),weights,paths,copy(anchestors))
+            anchestorsOfW = copy(anchestors)
+            push!(anchestorsOfW,w)
+            doPrint && println("    "^depth *"in, r=$(r), w=$(w), unvisited=$(unvisited)\n")
+            r = reachableVertices(r,g,w,depth+1,copy(unvisited),weights,anchestorsOfW)
             doPrint && println("    "^depth *"out, r=$(r)\n")
-
         end
         return r
     end
 
+    function validPath(w::Int64,weights::Array{Float64},anchestors::Array{Int64})
+        # trivial case of direct neighbor
+        if size(anchestors,1) == 1
+            return true
 
-    # different implementation idea
-    function reachableVertices2(g,v,refweight,depth,unvisited,weights)
-        doPrint = true
-        doPrint && println("    "^depth * "reachableVertices(v=$(v),refweight=$(refweight),depth=$(depth),unvisited=$(unvisited),weights=$(weights))\n")
-        # initialize set of reachable vertices (direct or indirect neighbors)
-        r = []
+        # check condition max(w(xi)) < w(w),w(v) for a path w,x1,x2,...,v
+        else
+            v = anchestors[1]
+            xs = anchestors[2:end]
+            maxWeight = maximum(weights[xs])
+            #println("    "^size(anchestors,1) *"v=$(v), weights(w)=$(weights[w]), xs=$(xs), maxWeight=$(maxWeight)\n")
 
-        # n: neighbors of v
-        unvisitedNeighbors = filter(i->unvisited[i]==1,g.adjacencyList[v])
-        if size(unvisitedNeighbors,1) == 0
-            return r
-        end
-        refweights = zeros(size(unvisitedNeighbors,1))
-        i = 0
-
-        # sort unvisitedNeighbors based on their weight
-        sort!(unvisitedNeighbors, by=x->weights[x])
-       doPrint &&  println("    "^depth *"unvisitedNeighbors=$(unvisitedNeighbors)\n")
-
-        for w in unvisitedNeighbors
-            i = i +1
-            # check again here since might been already checked at a lower depth, i.e. unvisited variable was modified
-            if unvisited[w] == 1
-                unvisited[w] = 0
-                if depth == 1
-                    r = vcat(r,w)
-                    refweights[i] = weights[w]
-                else
-                    if weights[w] > weights[v]
-                        if weights[w] > refweight
-                            r = vcat(r,w)
-                        else
-                          refweights[i] = weights[w]
-                        end
-                    end
-                end
+            if weights[w] > maxWeight && weights[v] > maxWeight
+                return true
+            else
+                return false
             end
         end
 
-        i = 0
-        for w in unvisitedNeighbors
-            i = i + 1
-            doPrint && println("    "^depth *"in, refweight=$(refweight), i=$(i), w=$(w)\n")
-            rv=  reachableVertices2(g,w,refweights[i],depth+1,unvisited,weights)
-            doPrint &&  println("  "^depth *"out\n")
-            if size(rv,1) > 0
-                r = vcat(r,rv)
-            end
-        end
-        doPrint && println("    "^depth *"return: r=$(r), depth=$(depth), v=$(v)\n")
-        return r
     end
+
 
     # returns lists of vertices that form the unconnected subgraphs (breath-first-search style)
     function getConnectedParts(g::Graph)
