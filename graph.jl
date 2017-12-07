@@ -8,11 +8,11 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
     # TODO: Rename attributes in a more consistent way
     type Graph
         adjacencyList::Array{Array{Int64,1}}
-        ordering::Array{Int64} # σ(v)
+        ordering::Array{Int64} # σ(v) = i
         reverseOrder::Array{Int64} #σ^(-1)(i)
 
          #constructor for adjacencylist input
-        function Graph(adjacencyList::Array)
+        function Graph(adjacencyList::Array{Array{Int64,1}})
             ordering = collect(1:size(adjacencyList,1))
             g = new(adjacencyList,ordering)
 
@@ -136,13 +136,14 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         # initialize edge set F of fill-in edges
         F = Array{Int64}[]
         N = numberOfVertizes(g)
-        weights = zeros(N)
-        unvisited = ones(N)
-        perfectOrdering = zeros(N)
+        weights = zeros(Int64,N)
+        unvisited = ones(Int64,N)
+        perfectOrdering = zeros(Int64,N)
         for i = N:-1:1
             # find unvisited vertex of maximum weight
             unvisited_weights = weights.*unvisited
             v = indmax(unvisited_weights)
+
             perfectOrdering[v] = i
             unvisited[v] = 0
             #println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
@@ -154,7 +155,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                 anchestors = [v]
                 S = Int64[]
                 S = reachableVertices!(S,g,v,1,copy(unvisited),weights,anchestors)
-               # println("S=$(S) of vertex $(v)")
+               #println("S=$(S) of vertex $(v)")
             end
             # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
             for w in S
@@ -183,41 +184,37 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         return nothing
     end
 
-    function reachableVertices!(r::Array{Int64}, g::Graph,v::Int64,depth::Int64,unvisited::Array{Float64,1},weights::Array{Float64,1},anchestors::Array{Int64,1})
+    function reachableVertices!(S::Array{Int64}, g::Graph,v::Int64,depth::Int64,unvisited::Array{Int64,1},weights::Array{Int64,1},anchestors::Array{Int64,1})
         # initialize set of reachable vertices (direct or indirect neighbors)
         # n: neighbors of v
         doPrint = false
         doPrint && println("    "^depth * "reachableVertices(v=$(v),depth=$(depth),unvisited=$(unvisited),weights=$(weights))\n")
         unvisitedNeighbors = filter(i->unvisited[i]==1,g.adjacencyList[v])
+
+        doPrint &&  println("    "^depth *"before unvisitedNeighbors=$(unvisitedNeighbors), S=$(S)\n")
+
+        # only visit neighbors that havent been added to S yet
+        filter!(f->!in(f,S),unvisitedNeighbors)
+        doPrint &&  println("    "^depth *"after unvisitedNeighbors=$(unvisitedNeighbors)\n")
+
         if size(unvisitedNeighbors,1) == 0
             doPrint && println("    "^depth *"End reached at vertex $(v)\n")
-            return r
+            return S
         end
-
-
-        # TODO: Check if necessary to sort neighbors
-        # sort unvisitedNeighbors based on their weight
-        #sort!(unvisitedNeighbors, by=x->weights[x])
-        doPrint &&  println("    "^depth *"before unvisitedNeighbors=$(unvisitedNeighbors), r=$(r)\n")
-
-        # only visit neighbors that havent been added to r yet
-        filter!(f->!in(f,r),unvisitedNeighbors)
 
         # direct unvisited neighbors are always added
         if depth == 1
-            r = vcat(r,unvisitedNeighbors)
+            S = vcat(S,unvisitedNeighbors)
         end
 
 
-
-        doPrint &&  println("    "^depth *"after unvisitedNeighbors=$(unvisitedNeighbors)\n")
-
+        # sort by weight
+        sort!(unvisitedNeighbors, by=x->weights[x])
         for w in unvisitedNeighbors
+            # only check vertices that havent been added to r
+            if !in(w,S) || depth==1
+                doPrint &&  println("    "^depth *"Check w=$(w) of v=$(v), weights(w)=$(weights[w]),weights(v)=$(weights[v]), \n")
 
-            #if !in(w,r) || in(w,directNeighbors)
-                doPrint &&  println("    "^depth *"Check w=$(w) of v=$(v), weights(w)=$(weights[w]),weights(v)=$(weights[v])\n")
-
-                # check again here since might been already checked at a lower depth, i.e. unvisited variable was modified
                 unvisited[w] = 0
 
                 # case that we have a sequence w(xi) < w(w), w(target)
@@ -225,29 +222,26 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                     doPrint &&  println("    "^depth *"validpath before w=$(w), weights(w)=$(weights[w]),anchestors=$(anchestors)\n")
                     if validPath(w,weights,anchestors)
                         # prevent adding a vertex twice if he has two valid paths
-                        if !in(w,r)
-                            push!(r,w)
+                        # TODO: Check if still necessary
+                        if !in(w,S)
+                            push!(S,w)
+                        else warn("Attempting to add same vertex twice!")
                         end
                     end
                 end
 
-                # else
-                #     if depth > 1 #or maybe > 2, means we tried this particular path for this vertex
-                #         push!(paths[v],anchestors)
-                #     end
-                #end
                 # sequence of vertices to reach w
-                anchestorsOfW = copy(anchestors)
-                push!(anchestorsOfW,w)
-                doPrint && println("    "^depth *"in, r=$(r), w=$(w), unvisited=$(unvisited)\n")
-                r = reachableVertices!(r,g,w,depth+1,copy(unvisited),weights,anchestorsOfW)
-                doPrint && println("    "^depth *"out, r=$(r)\n")
-           # end
+                push!(anchestors,w)
+                doPrint && println("    "^depth *"in, S=$(S), w=$(w), unvisited=$(unvisited)\n")
+                S = reachableVertices!(S,g,w,depth+1,unvisited,weights,anchestors)
+                pop!(anchestors)
+                doPrint && println("    "^depth *"out, S=$(S), unvisited=$(unvisited)\n")
+            end
         end
-        return r
+        return S
     end
 
-    function validPath(w::Int64,weights::Array{Float64},anchestors::Array{Int64})
+    function validPath(w::Int64,weights::Array{Int64},anchestors::Array{Int64})
         # trivial case of direct neighbor
         if size(anchestors,1) == 1
             return true

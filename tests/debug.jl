@@ -5,8 +5,7 @@ include("../graph.jl")
 
 using GraphModule, Base.Test
 
-g = Graph([[2, 5, 6], [1, 3, 6], [2, 4, 7], [3, 5, 6, 7], [1, 4], [1, 2, 4], [3, 4]])
-
+g = Graph([[2, 5, 6, 8, 3], [1, 4, 7], [1], [2, 6], [1, 8], [1, 4, 7, 8], [2, 6, 8], [1, 5, 6, 7]])
 
 mcsmSearch!(g)
 @test isPerfectOrdering(g) == true
