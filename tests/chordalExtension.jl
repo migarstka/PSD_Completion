@@ -8,7 +8,7 @@ using GraphModule, Base.Test
 # create random seed (to get reproducable sequence of random numbers)
 rng = MersenneTwister(123554);
 # Define number of test matrices
-nn = 10000
+nn = 1000
 
 
 @testset "Test Chordal Extension MCS-M Algorithm" begin
@@ -19,8 +19,9 @@ nn = 10000
         end
         # take random dimension
         dim = rand(rng,2:100,1,1)[1]
+        density = rand(rng,0.1:0.1:0.6,1,1)[1]
         # create random sparse matrix
-        A = sprand(rng,dim,dim,0.1)
+        A = sprand(rng,dim,dim,density)
         A = A+A'
         # create graph from A
         g = Graph(A)
