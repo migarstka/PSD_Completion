@@ -1,13 +1,10 @@
-# Test constructors of graph type
-
+# Test speed of MCS-M Algorithm
 workspace()
 include("../graph.jl")
 
 using GraphModule, Base.Test
 
-
-
-# precompile functions is question
+# precompile functions in question
 g = Graph([[2, 4, 5,7], [1,6,8], [4,5,7], [1,3,6], [1,3,6], [2,4,5], [1,3,8], [2,7]])
 mcsmSearch!(g)
 
@@ -33,6 +30,7 @@ for iii=1:nn
     g = Graph(A)
     # find chordal extension and perfect elimination ordering
     times[iii] = @elapsed mcsmSearch!(g)
+    #println(isPerfectOrdering(g))
 end
 
 # determine average runtime for mcsmSearch!

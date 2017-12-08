@@ -138,31 +138,33 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         F = Array{Int64}[]
         N = numberOfVertizes(g)
         weights = zeros(Int64,N)
-        unvisited = collect(1:1:N)
+        unvisited = ones(Int64,N)
         perfectOrdering = zeros(Int64,N)
         for i = N:-1:1
             # find unvisited vertex of maximum weight
-            v = unvisited[indmax(weights[unvisited])]
+            unvisited_weights = weights.*unvisited
+            v = indmax(unvisited_weights)
             perfectOrdering[v] = i
 
             doPrint && println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
             # find all unvisited vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
             # in the first step there will be no valid path, therefore choose S to be the direct neighbors
+            S = zeros(N)
             if i == N
-                S = g.adjacencyList[v]
+                S[g.adjacencyList[v]] = 1
             else
                 if i > 1
                     doPrint && println(" Dijkstra Search: v = $(v),  copy(unvisited)=$(copy(unvisited)),weights=$(weights)\n")
                     S = dijkstra(g,v,copy(unvisited),weights,N)
                     doPrint && println("S=$(S) of vertex $(v)\n")
                 else
-                    S = []
+                    S = zeros(N)
                 end
             end
-            deleteat!(unvisited,findfirst(unvisited,v))
+            unvisited[v] = 0
             # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
             #weights[v] = 100
-            for w in S
+            for w in find(x->x == 1,S)
                 weights[w]+=1
                 if !in(w,g.adjacencyList[v])
                     push!(F,[w,v])
@@ -187,41 +189,45 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         return nothing
     end
 
-    # modified dijkstra algortihm to find for each vertex the minimum distance to v, where minimum distance means:
+    # modified dijkstra algorithm to find for each vertex the minimum distance to v, where minimum distance means:
     # - if one vertex on the path has been visited the distance will be set reasonably high
     # - minimum distance is w = min(max(weight(x_i))) for all x_i in w,x1,x2,...,v
     function dijkstra(g::Graph,v::Int64,unvisited::Array{Int64,1},weights::Array{Int64,1},N::Int64)
         doPrint = false
-        numUnvisited = size(unvisited,1)
         distance = Inf*ones(Int64,N)
         distance[v] = 0
         weights[v] = 0
-        #anchestor = zeros(Int64,N)
         nodes = collect(1:N)
-        Q = copy(unvisited)
-        # find for each vertex the path with the lowest maximum weight on its anchestor vertices
+        # loop over all vertizes
         for iii = 1:N
-            u = nodes[indmin(distance[nodes])]
-            doPrint && println("--dijkstra:1,   iii=$(iii),Pick new: u=$(u) of distance=$(distance), unvisited=$(unvisited) and distance[unvisited]=$(distance[unvisited])\n")
-            deleteat!(nodes,findfirst(nodes,u))
-            doPrint && println("--dijkstra:2, Delete u: nodes=$(nodes), neighbors=$(g.adjacencyList[u])\n")
-            for w in g.adjacencyList[u]
-                doPrint && println("--dijkstra:3, Loop through neighbors of u=$(u):  w=$(w) isinUnvisited?=$(in(w,nodes))\n")
-                if in(w,nodes) #not sure if correct
-                    distanceUpdate(w,u,distance,weights,unvisited,N)
+            unvisitedNodes = filter(x->x !=-1,nodes)
+            # pick unprocessed vertex with lowest distance-value
+            u = unvisitedNodes[indmin(distance[unvisitedNodes])] #simplify!!!
+            # dont bother with vertizes that already have an order
+            if unvisited[u] == 1
+                doPrint && println("--dijkstra:1,   iii=$(iii),Pick new: u=$(u) of distance=$(distance), unvisited=$(unvisited)\n")
+                nodes[u] = -1 #flag that indicates that node has been visited
+                doPrint && println("--dijkstra:2, Delete u: nodes=$(nodes), neighbors=$(g.adjacencyList[u])\n")
+                # loop over all unvisited neighbors of u
+                for w in g.adjacencyList[u]
+                    doPrint && println("--dijkstra:3, Loop through neighbors of u=$(u):  w=$(w) isinUnvisited?=$(in(w,nodes))\n")
+                    if nodes[w] != -1
+                        distanceUpdate(w,u,distance,weights,unvisited,N)
+                    end
                 end
+            else
+                nodes[u] = -1
             end
-
         end
 
-        # add to the set S the vertizes that have a higher own weight than distance
-        S=Int64[]
-        doPrint && println("--dijkstra:4,  Decide which to add to S: weights=$(weights) distance=$(distance)\n")
-        S = vcat(S,filter(x->in(x,Q),g.adjacencyList[v]))
-
-        for u in Q
-            if weights[u] > distance[u] && !in(u,S)
-                push!(S,u)
+        # indicate with set S the vertizes that have a higher own weight than distance (flag set to 1)
+        S=zeros(N)
+        doPrint && println("--dijkstra:4,  Decide which S to add to S: weights=$(weights) distance=$(distance)\n")
+        # direct neighbors are always added to S
+        S[filter(x->unvisited[x] == 1,g.adjacencyList[v])]=1
+        for u in find(x->x == 1, unvisited)
+            if weights[u] > distance[u]
+                S[u] = 1
             end
         end
         doPrint && ("--dijkstra:5,  S=$(S)")
@@ -231,8 +237,8 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
     function distanceUpdate(w::Int64,u::Int64,distance::Array{Float64,1},weights::Array{Int64,1},unvisited::Array{Int64,1},N::Int64)
         doPrint = false
         doPrint && println("     --distanceUpdate:1, In: w=$(w) of u=$(u), distance[w]=$(distance[w]), distance[u]=$(distance[u]), weights[u]=$(weights[u])\n")
-        # if the vertex is already numbered from a previous run of dijkstra() it cant be used as a valid path, hence make the distance reasonably high, ie. d=N
-        if in(w,unvisited)
+        # if the vertex has already an order from a previous run of dijkstra() it can't be used as a valid path, hence make the distance reasonably high, ie. d=N
+        if unvisited[w] == 1
             alternative = max(distance[u],weights[u])
         else
             alternative = N

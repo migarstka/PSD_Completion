@@ -1,4 +1,4 @@
-# Test constructors of graph type
+# Test MCS-M Algorithm with a set of random sparse matrices
 
 workspace()
 include("../graph.jl")
@@ -8,7 +8,7 @@ using GraphModule, Base.Test
 # create random seed (to get reproducable sequence of random numbers)
 rng = MersenneTwister(123554);
 # Define number of test matrices
-nn = 1000
+nn = 3000
 
 
 @testset "Test Chordal Extension MCS-M Algorithm" begin
