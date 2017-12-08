@@ -133,31 +133,33 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
 
     # implementation of the MCS-M algorithm (see. A. Berry - Maximum Cardinality Search for Computing Minimal Triangulations of Graphs) that finds a minimal triangulation
     function mcsmSearch!(g::Graph)
+        doPrint = false
         # initialize edge set F of fill-in edges
         F = Array{Int64}[]
         N = numberOfVertizes(g)
         weights = zeros(Int64,N)
-        unvisited = ones(Int64,N)
+        unvisited = collect(1:1:N)
         perfectOrdering = zeros(Int64,N)
         for i = N:-1:1
+
             # find unvisited vertex of maximum weight
-            unvisited_weights = weights.*unvisited
-            v = indmax(unvisited_weights)
+            v = unvisited[indmax(weights[unvisited])]
 
             perfectOrdering[v] = i
-            unvisited[v] = 0
-            #println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
+
+            doPrint && println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
             # find all unvisited vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
             # in the first step there will be no valid path, therefore choose S to be the direct neighbors
             if i == N
-                S = filter(j->unvisited[j]==1,g.adjacencyList[v])
+                S = g.adjacencyList[v]
             else
-                anchestors = [v]
-                S = Int64[]
-                S = reachableVertices!(S,g,v,1,copy(unvisited),weights,anchestors)
-               #println("S=$(S) of vertex $(v)")
+                doPrint && println(" Dijkstra Search: v = $(v),  copy(unvisited)=$(copy(unvisited)),weights=$(weights)\n")
+                S = dijkstra(g,v,copy(unvisited),weights,N)
+                doPrint && println("S=$(S) of vertex $(v)\n")
             end
+            deleteat!(unvisited,findfirst(unvisited,v))
             # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
+            #weights[v] = 100
             for w in S
                 weights[w]+=1
                 if !in(w,g.adjacencyList[v])
@@ -182,6 +184,60 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
             push!(g.adjacencyList[edge[2]],edge[1])
         end
         return nothing
+    end
+
+    function dijkstra(g::Graph,v::Int64,unvisited::Array{Int64,1},weights::Array{Int64,1},N::Int64)
+        doPrint = false
+        numUnvisited = size(unvisited,1)
+        distance = Inf*ones(Int64,N)
+        distance[v] = 0
+        weights[v] = 0
+        #anchestor = zeros(Int64,N)
+        nodes = collect(1:N)
+        Q = copy(unvisited)
+        # find for each vertex the path with the lowest maximum weight on its anchestor vertices
+        for iii = 1:N
+            u = nodes[indmin(distance[nodes])]
+            doPrint && println("--dijkstra:1,   iii=$(iii),Pick new: u=$(u) of distance=$(distance), unvisited=$(unvisited) and distance[unvisited]=$(distance[unvisited])\n")
+            deleteat!(nodes,findfirst(nodes,u))
+            doPrint && println("--dijkstra:2, Delete u: nodes=$(nodes), neighbors=$(g.adjacencyList[u])\n")
+            for w in g.adjacencyList[u]
+                doPrint && println("--dijkstra:3, Loop through neighbors of u=$(u):  w=$(w) isinUnvisited?=$(in(w,nodes))\n")
+                if in(w,nodes) #not sure if correct
+                    distanceUpdate(w,u,distance,weights,unvisited,N)
+                end
+            end
+
+        end
+
+        # add to the set S the vertizes that have a higher own weight than distance
+        S=Int64[]
+        doPrint && println("--dijkstra:4,  Decide which to add to S: weights=$(weights) distance=$(distance)\n")
+        S = vcat(S,filter(x->in(x,Q),g.adjacencyList[v]))
+
+        for u in Q
+            if weights[u] > distance[u] && !in(u,S)
+                push!(S,u)
+            end
+        end
+        doPrint && ("--dijkstra:5,  S=$(S)")
+        return S
+    end
+
+    function distanceUpdate(w::Int64,u::Int64,distance::Array{Float64,1},weights::Array{Int64,1},unvisited::Array{Int64,1},N::Int64)
+        doPrint = false
+        doPrint && println("     --distanceUpdate:1, In: w=$(w) of u=$(u) weights[u]=$(weights[u]), distance[w]=$(distance[w])\n")
+        if in(w,unvisited)
+            alternative = distance[u]
+        else
+            alternative = N
+        end
+
+        if alternative < distance[w]
+            distance[w] = alternative
+        end
+        doPrint && println("     --distanceUpdate:1, New distances of w=$(w) of u=$(u) distance[w]=$(distance[w])\n")
+
     end
 
     function reachableVertices!(S::Array{Int64}, g::Graph,v::Int64,depth::Int64,unvisited::Array{Int64,1},weights::Array{Int64,1},anchestors::Array{Int64,1})

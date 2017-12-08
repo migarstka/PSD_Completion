@@ -20,12 +20,12 @@ nn = 10000
         # take random dimension
         dim = rand(rng,2:100,1,1)[1]
         # create random sparse matrix
-        A = sprand(rng,8,8,0.1)
+        A = sprand(rng,dim,dim,0.1)
         A = A+A'
         # create graph from A
         g = Graph(A)
         # find chordal extension and perfect elimination ordering
-         #println(g)
+        #println(g)
         mcsmSearch!(g)
         @test begin
             res = isPerfectOrdering(g) == true
