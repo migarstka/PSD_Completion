@@ -1,25 +1,25 @@
 module TreeModule
     using GraphModule
-    export Tree, Node, createTreeFromGraph, createSupernodeEliminationTree, createCliqueTree
+    export Tree, Node, createTreeFromGraph, createSupernodeEliminationTree, createCliqueTree, numberOfCliques
 
 
     # -------------------------------------
     # TYPE DEFINITIONS
     # -------------------------------------
     type Node
-        value_top
-        value_btm
+        value_top::Array{Int64,1}
+        value_btm::Array{Int64,1}
         degree::Int64
         parent::Int64
         children::Array{Int64}
         inSuperNode::Int64
 
         # two constructor definitions
-        function Node(value_top,value_btm,degree::Int64,parent::Int64)
+        function Node(value_top::Array{Int64},value_btm::Array{Int64},degree::Int64,parent::Int64)
             new(value_top,value_btm,degree,parent,[],0)
         end
 
-        function Node(value_top,value_btm,degree::Int64,parent::Int64,children::Array{Int64})
+        function Node(value_top::Array{Int64},value_btm::Array{Int64},degree::Int64,parent::Int64,children::Array{Int64})
             new(value_top,value_btm,degree,parent,children,0)
         end
 
@@ -28,9 +28,13 @@ module TreeModule
     type Tree
         root::Int64
         nodes::Array{Node}
+        order::Array{Int64}
+        reverseOrder::Array{Int64}
          #constructor
+
+
         function Tree()
-            new(0,[])
+            new(0,Int64[],Int64[],Int64[])
         end
     end
 
@@ -46,6 +50,13 @@ module TreeModule
     # -------------------------------------
     # FUNCTION DEFINITIONS
     # -------------------------------------
+
+     function numberOfCliques(ct::Tree)
+        return size(ct.nodes,1)
+    end
+
+
+
     function createTreeFromGraph(g::Graph)
         tree = Tree()
         N = numberOfVertices(g)
@@ -57,7 +68,7 @@ module TreeModule
             degree = size(higherNeighbors,1)
             parent =findParent(g,higherNeighbors)
             order = g.ordering[i]
-            node = Node(value,0,degree,parent)
+            node = Node([value],Int64[],degree,parent)
             push!(tree.nodes,node)
             if parent == 0
                 tree.root = i
@@ -67,7 +78,7 @@ module TreeModule
         # fill the children property of each node
         for node in tree.nodes
             if node.parent != 0
-                push!(tree.nodes[node.parent].children,node.value_top)
+                push!(tree.nodes[node.parent].children,node.value_top[1])
             end
         end
         return tree
@@ -83,7 +94,7 @@ module TreeModule
             child = hasLowerDegChild(node,t)
             if child == -1
                 # if vertex is representative, i.e. doesnt have lower degree child, create new SuperNode
-                superNode = Node([nodeInd],NaN,-1,-1)
+                superNode = Node([nodeInd],[0],-1,-1)
                 push!(superTree.nodes,superNode)
                 node.inSuperNode = size(superTree.nodes,1)
             else
@@ -131,9 +142,10 @@ module TreeModule
     # takes as input a SupernodeEliminationTree and turns it into a clique tree (s. Vandenberghe, Chordal Graphs and SDO, p.287)
     function createCliqueTree(t::Tree,g::Graph)
         cliqueTree = Tree()
+
         for superNode in t.nodes
             snd_v = copy(superNode.value_top)
-            col_v_snd_v = []
+            col_v_snd_v = Int64[]
             for node in snd_v
                 higherNeighbors = findHigherNeighbors(g,node)
                 if size(higherNeighbors,1) > 0
@@ -144,11 +156,34 @@ module TreeModule
             for vertex in snd_v
                 filter!(f -> f!=vertex,col_v_snd_v)
             end
-
+            sort!(col_v_snd_v, by=x->g.ordering[x])
             node = Node(col_v_snd_v,snd_v,-1,superNode.parent,superNode.children)
             push!(cliqueTree.nodes,node)
         end
+
+        postOrdering!(cliqueTree,t,g)
+
+
         return cliqueTree
     end
+    # consecutive ordering of vertices in snd(v)
+    # ordering defines a topological ordering of the representative vertices in the supernodal elimination tree, i.e.
+    # v <_rho q(v) if v is a representative vertex and q(v) is the parent of v in the supernodal elimination tree
+    function postOrdering!(ct::Tree,superTree::Tree,g::Graph)
+        ct.order = zeros(Int64,numberOfCliques(ct))
+        ct.reverseOrder = zeros(Int64,numberOfCliques(ct))
+        repVertices = Int64[]
+        for clique in ct.nodes
+            push!(repVertices,clique.value_btm[1])
+        end
+        vertexOrdering = copy(g.ordering)
+        for iii = 1:numberOfCliques(ct)
+            orderInd = indmin(vertexOrdering[repVertices])
+            ct.order[orderInd] = iii
+            ct.reverseOrder[iii] = orderInd
+            vertexOrdering[repVertices[orderInd]] = numberOfCliques(ct) + 1
+        end
 
+
+    end
 end #MODULE

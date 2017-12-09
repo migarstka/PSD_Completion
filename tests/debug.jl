@@ -3,44 +3,30 @@
 workspace()
 include("../graph.jl")
 include("../tree.jl")
+include("../helper.jl")
+include("../completion.jl")
 
-using GraphModule, Base.Test, TreeModule
+using GraphModule, Base.Test, TreeModule, Helper, Completion
 
+rng = MersenneTwister(123554);
 
-# all vertices in a clique have to be pair-wise adjacent, i.e. induce a complete subgraph
-function checkCliques(ct::Tree,g::Graph)
-    for node in ct.nodes
-        clique = node.value_btm
-        if size(clique,1) > 1
-            for v in clique
-                otherNodes = filter(x->x!=v,clique)
-                for cliqueNode in otherNodes
-                    if !in(cliqueNode,g.adjacencyList[v])
-                        return false
-                    end
-                end
-            end
-        end
-    end
-    return true
-end
 
 #g = Graph([[2, 4, 5,7], [1,6,8], [4,5,7], [1,3,6], [1,3,6], [2,4,5], [1,3,8], [2,7]])
 
-# create random sparse matrix
-A = sprand(15,15,0.5)
-A = A+A'
-
+# create random completable matrix
+ A, B = generateCompleatableMatrix(8,0.1,rng)
 # create graph from A and make Graph chordal
+ # generate graph
 g = Graph(A)
+# find perfect ordering and generate relevant trees to obtain clique tree
 mcsmSearch!(g)
-# create Tree from Graph
-t = createTreeFromGraph(g)
-superNodeElimTree = createSupernodeEliminationTree(t,g)
-ct = createCliqueTree(superNodeElimTree,g)
+elimTree = createTreeFromGraph(g)
+superNodeElimTree = createSupernodeEliminationTree(elimTree,g)
+cliqueTree = createCliqueTree(superNodeElimTree,g)
+N = numberOfCliques(cliqueTree)
 
+W = copy(A)
 
-checkCliques(ct,g)
 
 
 

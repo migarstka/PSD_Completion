@@ -5,8 +5,9 @@ module Helper
 
     function generatePosDefMatrix(n::Int64,rng)
         X = rand(rng,n,n)
-        X = 1/2*(X+X')
-        X = X + n*eye(n)
+        #X = 1/2*(X+X')
+        #X = X + n*eye(n)
+        X = X*X'
         return X
     end
 
@@ -24,8 +25,7 @@ module Helper
         end
 
         # create a random dense positive definite matrix of dimension n
-        Y = generatePosDefMatrix(n,rng)
-        X = copy(Y)
+        X = generatePosDefMatrix(n,rng)
         numZeros = 0
 
 
@@ -81,7 +81,7 @@ module Helper
             # count number of nonzeros
             numZeros += (2*(i_right-i_left+1)*(j_btm-j_top+1) - zerosPresent)
         end
-        return X,Y
+        return X
 
     end
 
