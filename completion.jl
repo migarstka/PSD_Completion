@@ -3,13 +3,18 @@ module Completion
     export psdCompletion
 
 
-    function psdCompletion(A,graph)
+    function psdCompletion(A)
+
+        # generate graph
+        g = Graph(A)
         # find perfect ordering and generate relevant trees to obtain clique tree
-        mcsSearch(graph)
-        elimTree = createTreeFromGraph(graph)
-        superNodeElimTree = createSupernodeEliminationTree(elimTree,graph)
-        cliqueTree = createCliqueTree(superNodeElimTree,graph)
-        N = numberOfVertizes(graph)
+        mcsmSearch!(g)
+        elimTree = createTreeFromGraph(g)
+        superNodeElimTree = createSupernodeEliminationTree(elimTree,g)
+        cliqueTree = createCliqueTree(superNodeElimTree,g)
+        N = numberOfVertizes(g)
+
+
         # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
         W = A
         # TODO: Check if the order is correct

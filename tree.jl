@@ -108,7 +108,6 @@ module TreeModule
         i = 0
         for superNode in superTree.nodes
             i+=1
-            @show(i)
             if superNode.parent != 0
                 push!(superTree.nodes[superNode.parent].children,i)
             end
