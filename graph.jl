@@ -1,5 +1,5 @@
 module GraphModule
-export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, findParent, isPerfectOrdering, isConnected
+export Graph, numberOfVertices,mcsSearch!, mcsmSearch!, findHigherNeighbors, findParent, isPerfectOrdering, isConnected
 
 
     # -------------------------------------
@@ -81,7 +81,20 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
     # -------------------------------------
     # FUNCTION DEFINITIONS
     # -------------------------------------
-    function numberOfVertizes(g::Graph)
+
+    # Redefinition of the show function that fires when the object is called
+      function Base.show(io::IO, obj::Graph)
+        println(io,"\nGraph:\nAdjacency List:\n")
+        for i=1:size(obj.adjacencyList,1)
+            println(io,"Vertex $(i): $(obj.adjacencyList[i])")
+        end
+        println(io,"\nOrdering σ(v) = i: $(obj.ordering)")
+        println(io,"Reverse Ordering σ^-1(i) = v: $(obj.reverseOrder)\n")
+
+      end
+
+
+    function numberOfVertices(g::Graph)
         return size(g.ordering,1)
     end
 
@@ -104,7 +117,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
 
     # performs a maximum cardinality search and updates the ordering to the graph (only perfect elim. ordering if graph is chordal)
     function mcsSearch!(g::Graph)
-        N = numberOfVertizes(g)
+        N = numberOfVertices(g)
         weights = zeros(N)
         unvisited = ones(N)
         perfectOrdering = zeros(N)
@@ -136,7 +149,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         doPrint = false
         # initialize edge set F of fill-in edges
         F = Array{Int64}[]
-        N = numberOfVertizes(g)
+        N = numberOfVertices(g)
         weights = zeros(Int64,N)
         unvisited = ones(Int64,N)
         perfectOrdering = zeros(Int64,N)
@@ -147,7 +160,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
             perfectOrdering[v] = i
 
             doPrint && println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
-            # find all unvisited vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
+            # find all unvisited Vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
             # in the first step there will be no valid path, therefore choose S to be the direct neighbors
             S = zeros(N)
             if i == N
@@ -162,7 +175,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                 end
             end
             unvisited[v] = 0
-            # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
+            # increment weight of all Vertices w and if w and v are no direct neighbors, add edges to F
             #weights[v] = 100
             for w in find(x->x == 1,S)
                 weights[w]+=1
@@ -198,12 +211,12 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
         distance[v] = 0
         weights[v] = 0
         nodes = collect(1:N)
-        # loop over all vertizes
+        # loop over all Vertices
         for iii = 1:N
             unvisitedNodes = filter(x->x !=-1,nodes)
             # pick unprocessed vertex with lowest distance-value
             u = unvisitedNodes[indmin(distance[unvisitedNodes])] #simplify!!!
-            # dont bother with vertizes that already have an order
+            # dont bother with Vertices that already have an order
             if unvisited[u] == 1
                 doPrint && println("--dijkstra:1,   iii=$(iii),Pick new: u=$(u) of distance=$(distance), unvisited=$(unvisited)\n")
                 nodes[u] = -1 #flag that indicates that node has been visited
@@ -220,7 +233,7 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
             end
         end
 
-        # indicate with set S the vertizes that have a higher own weight than distance (flag set to 1)
+        # indicate with set S the Vertices that have a higher own weight than distance (flag set to 1)
         S=zeros(N)
         doPrint && println("--dijkstra:4,  Decide which S to add to S: weights=$(weights) distance=$(distance)\n")
         # direct neighbors are always added to S
@@ -250,9 +263,9 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
     end
 
 
-    # returns lists of vertices that form the unconnected subgraphs (breath-first-search style)
+    # returns lists of Vertices that form the unconnected subgraphs (breath-first-search style)
     function getConnectedParts(g::Graph)
-        N = numberOfVertizes(g)
+        N = numberOfVertices(g)
         subgraphs = []
         visited = zeros(N)
         allVisited = false
@@ -274,10 +287,10 @@ export Graph, numberOfVertizes,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                 end
                 frontier = nextFrontier
             end
-            # add vertices of subgraph to array
+            # add Vertices of subgraph to array
             push!(subgraphs,visitedNodes)
 
-            # if all vertices are processed break
+            # if all Vertices are processed break
             if !in(0,visited)
                 allVisited = true
             end

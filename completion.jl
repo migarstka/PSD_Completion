@@ -12,7 +12,7 @@ module Completion
         elimTree = createTreeFromGraph(g)
         superNodeElimTree = createSupernodeEliminationTree(elimTree,g)
         cliqueTree = createCliqueTree(superNodeElimTree,g)
-        N = numberOfVertizes(g)
+        N = numberOfVertices(g)
 
 
         # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)

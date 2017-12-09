@@ -12,9 +12,9 @@ rng = MersenneTwister(123554);
 nn = 1000
 
 function validTree(t::Tree,g::Graph)
-    N = numberOfVertizes(g)
+    N = numberOfVertices(g)
     if size(t.nodes,1) != size(g.adjacencyList,1)
-        warn("Number of tree nodes and graph vertices doesnt match!")
+        warn("Number of tree nodes and graph Vertices doesnt match!")
         return false
     end
 
