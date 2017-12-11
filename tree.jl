@@ -184,6 +184,9 @@ module TreeModule
             vertexOrdering[repVertices[orderInd]] = numberOfCliques(ct) + 1
         end
 
+        # also try to sort the
+
+        return nothing
 
     end
 end #MODULE

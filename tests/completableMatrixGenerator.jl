@@ -10,7 +10,7 @@ rng = MersenneTwister(123554);
 # Define number of test matrices
 nn = 10000
 
-@testset "Generate  Pos-Def-Completable Matrices" begin
+@testset "Generate Pos-Def-Completable Matrices" begin
     for iii=1:nn
 
         dim = rand(rng,2:100)

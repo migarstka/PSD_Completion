@@ -1,13 +1,16 @@
 module Helper
-
-    export generatePosDefMatrix, generateCompleatableMatrix
-
+    using PyCall, GraphModule
+    export generatePosDefMatrix, generateCompleatableMatrix, completeChompack
+ @pyimport chompack as chom
+ @pyimport numpy as np
+ @pyimport cvxopt as cvx
+ @pyimport scipy.sparse as pysparse
 
     function generatePosDefMatrix(n::Int64,rng)
-        X = rand(rng,n,n)
+        X = rand(rng,-2:1:2,n,n)
         #X = 1/2*(X+X')
         #X = X + n*eye(n)
-        X = X*X'
+        X = 0.5*X*X'
         return X
     end
 
@@ -43,6 +46,7 @@ module Helper
         maxBlockSize = maxBlockWidth^2
 
         while numZeros < desiredNumZeros
+            Y = copy(X)
             numZerosAvailable = (desiredNumZeros - numZeros) / 2
             if numZerosAvailable <= maxBlockSize
                 maxSize = Int(floor(sqrt(numZerosAvailable)))
@@ -78,12 +82,52 @@ module Helper
             X[i_left:i_right,j_top:j_btm] = 0
             X[j_top:j_btm,i_left:i_right] = 0
 
-            # count number of nonzeros
-            numZeros += (2*(i_right-i_left+1)*(j_btm-j_top+1) - zerosPresent)
+            # # check if matrix has a chordal sparsity pattern
+            # g = Graph(X)
+            # mcsSearch!(g)
+            # # if not reset the matrix
+            # if !isPerfectOrdering(g)
+            #     X = Y
+            # else
+            #     # count number of nonzeros
+                numZeros += (2*(i_right-i_left+1)*(j_btm-j_top+1) - zerosPresent)
+            # end
         end
         return X
 
     end
 
+    function completeChompack(A)
 
+        N = size(A,1)
+        x = Float64[]
+        I = Int64[]
+        J = Int64[]
+
+        for iii = 1:N
+            for jjj = 1:N
+                if A[iii,jjj] != 0
+                    push!(x,A[iii,jjj])
+                    push!(I,iii-1)
+                    push!(J,jjj-1)
+                end
+            end
+        end
+
+        A = cvx.spmatrix(x,(I...),(J...))
+
+        symb = chom.symbolic(A)
+        Asymb = chom.cspmatrix(symb)
+        W = chom.psdcompletion(Asymb)
+
+        (m,n) = W[:size]
+        F = zeros(m,n)
+
+        for i=1:m
+            for j=1:n
+                F[i,j] = W[i,j]
+            end
+        end
+        return F
+    end
 end #Module

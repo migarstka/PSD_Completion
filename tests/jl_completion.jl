@@ -11,7 +11,7 @@ using GraphModule, TreeModule, Base.Test, Completion, Helper
 # create random seed (to get reproducable sequence of random numbers)
 rng = MersenneTwister(123554);
 # Define number of test matrices
-nn = 10
+nn = 1
 
 @testset "Test positive semidefinite completion" begin
 
@@ -23,7 +23,7 @@ nn = 10
         # take random dimension
         dim = rand(rng,2:100)
         density = rand(rng,0.1:0.1:0.6)
-        A = generateCompleatableMatrix(dim,density,rng)
+        A = generateCompleatableMatrix(8,density,rng)
           if mod(iii,10) == 0
             #println(A)
         end
