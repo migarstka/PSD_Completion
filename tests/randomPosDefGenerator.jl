@@ -1,7 +1,9 @@
 workspace()
+include("../graph.jl")
+include("../tree.jl")
 include("../helper.jl")
 
-using Helper, Base.Test, Helper
+using GraphModule, TreeModule,Helper, Base.Test
 
 rng = MersenneTwister(123554);
 

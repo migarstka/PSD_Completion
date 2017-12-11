@@ -41,7 +41,7 @@ export Graph, numberOfVertices,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                     end
                 end
             end
-            g = new(adjacencyList,ordering)
+            g = new(adjacencyList,ordering,[])
             # make sure that the graph is connected
             connectGraph!(g)
             return g
@@ -71,7 +71,7 @@ export Graph, numberOfVertices,mcsSearch!, mcsmSearch!, findHigherNeighbors, fin
                         end
                 end
             end
-            g = new(adjacencyList,ordering)
+            g = new(adjacencyList,ordering,[])
             connectGraph!(g)
             return g
         end

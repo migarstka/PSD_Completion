@@ -1,17 +1,30 @@
 module Helper
-    using PyCall, GraphModule
+    using GraphModule,TreeModule
     export generatePosDefMatrix, generateCompleatableMatrix, completeChompack
- @pyimport chompack as chom
- @pyimport numpy as np
- @pyimport cvxopt as cvx
- @pyimport scipy.sparse as pysparse
+
 
     function generatePosDefMatrix(n::Int64,rng)
-        X = rand(rng,-2:1:2,n,n)
-        #X = 1/2*(X+X')
-        #X = X + n*eye(n)
-        X = 0.5*X*X'
+        X = rand(rng,n,n)
+        X = 0.5*(X*X')
         return X
+    end
+
+    function droplower(A::SparseMatrixCSC)
+        m,n = size(A)
+        rows = rowvals(A)
+        vals = nonzeros(A)
+        V = Vector{eltype(A)}()
+        I = Vector{Int}()
+        J = Vector{Int}()
+        for i=1:n
+            for j in nzrange(A,i)
+                rows[j]>i && break
+                push!(I,rows[j])
+                push!(J,i)
+                push!(V,vals[j])
+            end
+        end
+        return sparse(I,J,V,m,n)
     end
 
     """
@@ -27,73 +40,27 @@ module Helper
             error("Density value has to be between 0 and 1")
         end
 
-        # create a random dense positive definite matrix of dimension n
-        X = generatePosDefMatrix(n,rng)
-        numZeros = 0
+        # create a random sparse matrix of dimension n and density
+        X = sprand(rng,n,n,density) + sparse(diagm(rand(n)))
+        X = droplower(X)
+        X = full(Symmetric(X))
 
-
-        #determine roughly how many zeros the matrix should have
-        desiredNumZeros = Int(floor((n^2-n)*(1-density)))
-        # make number even
-        desiredNumZeros = desiredNumZeros - mod(desiredNumZeros,2)
-
-
-        # determine max size of the zero blocks
-        maxBlockWidth = Int(floor(n/5))
-        if maxBlockWidth == 0
-            maxBlockWidth = 1
+        # calculate cliques of X
+        g = Graph(X)
+        mcsmSearch!(g)
+        t = createTreeFromGraph(g)
+        snet = createSupernodeEliminationTree(t,g)
+        ct = createCliqueTree(snet,g)
+        println(ct)
+        # overwrite the cliques with positive definite matrices and set the rest to zero
+        Y = 0*X
+        for clique in ct.nodes
+            vertices = clique.value_btm
+            N = size(vertices,1)
+            Y[vertices,vertices] = generatePosDefMatrix(N,rng)
         end
-        maxBlockSize = maxBlockWidth^2
 
-        while numZeros < desiredNumZeros
-            Y = copy(X)
-            numZerosAvailable = (desiredNumZeros - numZeros) / 2
-            if numZerosAvailable <= maxBlockSize
-                maxSize = Int(floor(sqrt(numZerosAvailable)))
-            else
-                maxSize = maxBlockWidth
-            end
-            #randomly pick a blockwidth to delete
-            bw = rand(1:maxSize)
-
-            i_right = rand(1:n-1)
-            j_top = rand(i_right+1:n)
-
-            if bw == 1
-                i_left = i_right
-                j_btm = j_top
-            else
-                i_left = i_right-(bw-1)
-                j_btm = j_top+(bw-1)
-
-                if i_left < 1
-                    i_left = 1
-                end
-                if j_btm > n
-                    j_btm = n
-                end
-
-            end
-
-            # check how may zeros are alreay in the considered block
-            zerosPresent = size(find(x->x==0,X[i_left:i_right,j_top:j_btm]),1) * 2
-
-            # overwrite block and transposed block
-            X[i_left:i_right,j_top:j_btm] = 0
-            X[j_top:j_btm,i_left:i_right] = 0
-
-            # # check if matrix has a chordal sparsity pattern
-            # g = Graph(X)
-            # mcsSearch!(g)
-            # # if not reset the matrix
-            # if !isPerfectOrdering(g)
-            #     X = Y
-            # else
-            #     # count number of nonzeros
-                numZeros += (2*(i_right-i_left+1)*(j_btm-j_top+1) - zerosPresent)
-            # end
-        end
-        return X
+        return Y
 
     end
 
