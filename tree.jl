@@ -144,6 +144,7 @@ module TreeModule
         cliqueTree = Tree()
 
         for superNode in t.nodes
+            # snd_v: the vertices of snd_v are ordered consecutively
             snd_v = copy(superNode.value_top)
             col_v_snd_v = Int64[]
             for node in snd_v
@@ -161,6 +162,8 @@ module TreeModule
             push!(cliqueTree.nodes,node)
         end
 
+        # TODO: Enumerate the supernodes in descending order for algorithm to work
+        # order of col(v) \ snd(v) should match that of snd(v)
         postOrdering!(cliqueTree,t,g)
 
 

@@ -93,7 +93,7 @@ end
         snet = createSupernodeEliminationTree(t,g)
         ct = createCliqueTree(snet,g)
         @test checkLowerRow(ct,snet)
-        @test   checkUpperRow(ct,snet,g)
+        @test checkUpperRow(ct,snet,g)
         @test checkCliques(ct,g)
 
     end

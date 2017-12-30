@@ -5,7 +5,7 @@
 # using GraphModule, TreeModule
 
 # load reference functions from python chompack package
-using PyCall
+using PyCall, Base.Test
  @pyimport chompack as chom
  @pyimport numpy as np
  @pyimport cvxopt as cvx
@@ -52,12 +52,17 @@ for iii = 1:N
         end
     end
 end
-I = [0, 1, 3, 1, 5, 2, 6, 3, 4, 5, 4, 5, 6, 5, 6]
-J = [0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6]
-A = cvx.spmatrix(0.1,(I...),(J...))
+
+x = [0.522 0.494 0.494 0.5 0.336 0.336 0.4]
+#I = [0, 1, 3, 1, 5, 2, 6, 3, 4, 5, 4, 5, 6, 5, 6]
+#J = [0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6]
+I = [0 1 0 1 2 1 2]
+J = [0 0 1 1 1 2 2]
+A = cvx.spmatrix(x,(I...),(J...),(3,3))
 
 symb = chom.symbolic(A)
 Asymb = chom.cspmatrix(symb)
+Asymb += A
 W = chom.psdcompletion(Asymb)
 
 (m,n) = W[:size]
@@ -69,4 +74,4 @@ for i=1:m
     end
 end
 
-@test isposdef(F)
+#@test isposdef(F)

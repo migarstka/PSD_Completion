@@ -7,9 +7,6 @@ using GraphModule, TreeModule,Helper, Base.Test
 
 rng = MersenneTwister(123554);
 
-
-
-
 # Define number of test matricesw
 nn = 10000
 

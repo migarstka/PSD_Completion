@@ -1,15 +1,24 @@
 module Helper
     using GraphModule,TreeModule
-    export generatePosDefMatrix, generateCompleatableMatrix, completeChompack
+    export generatePosDefMatrix, generateCompleatableMatrix
 
 
     function generatePosDefMatrix(n::Int64,rng)
-        X = rand(rng,n,n)
-        X = 0.5*(X*X')
+        # FIXME: Remove the range
+        X = rand(rng,-2.0:1.0:2.0,n,n)
+        # make sure the diagonals are unequal to zero
+        for iii = 1:n
+            if X[iii,iii] == 0.0
+                X[iii,iii] = rand(rng,[-2.0,-1.0,1.0,2.0])
+            end
+        end
+        #X = 0.5*(X*X')
+        X = (X*X')
+
         return X
     end
 
-    function droplower(A::SparseMatrixCSC)
+   function droplower(A::SparseMatrixCSC)
         m,n = size(A)
         rows = rowvals(A)
         vals = nonzeros(A)
@@ -31,70 +40,46 @@ module Helper
     generateCompleatableMatrix(n::Int64,density::Float64,rng)
 
     Generates a n x n-matrix X with specified density that is guaranteed to be completable to a
-    positive definite matrix by selecting other values for the zeros. The matrix is created by starting
-    with a positive definite matrix Y and then randomly overwriting off-diagonal elements with zeros until
-    the desired density is achieved.
+    positive definite matrix by selecting other values for the zeros. Note: The density is only achieved
+    roughly since some zeros are filled by overwritting cliques with positive definite blocks.
     """
     function generateCompleatableMatrix(n::Int64,density::Float64,rng)
         if density <= 0 || density > 1
             error("Density value has to be between 0 and 1")
         end
 
-        # create a random sparse matrix of dimension n and density
-        X = sprand(rng,n,n,density) + sparse(diagm(rand(n)))
-        X = droplower(X)
-        X = full(Symmetric(X))
 
-        # calculate cliques of X
-        g = Graph(X)
+        # TODO:
+        # - generate a full positive definite matrix
+        # - create a chordal graph with matching density
+        # - delete entries that are not considered in the graph
+        # - resulting matrix should be positive definite
+
+        # create a full symmetric positive definite matrix of size n
+        X = generatePosDefMatrix(n,rng)
+
+        # generate a random chordal graph that matches the demanded density
+        A = sprand(rng,n,n,density)
+        A = droplower(A)
+        A = full(Symmetric(A))
+        g = Graph(A)
         mcsmSearch!(g)
-        t = createTreeFromGraph(g)
-        snet = createSupernodeEliminationTree(t,g)
-        ct = createCliqueTree(snet,g)
-        println(ct)
-        # overwrite the cliques with positive definite matrices and set the rest to zero
-        Y = 0*X
-        for clique in ct.nodes
-            vertices = clique.value_btm
-            N = size(vertices,1)
-            Y[vertices,vertices] = generatePosDefMatrix(N,rng)
-        end
-
-        return Y
-
-    end
-
-    function completeChompack(A)
-
-        N = size(A,1)
-        x = Float64[]
-        I = Int64[]
-        J = Int64[]
-
-        for iii = 1:N
-            for jjj = 1:N
-                if A[iii,jjj] != 0
-                    push!(x,A[iii,jjj])
-                    push!(I,iii-1)
-                    push!(J,jjj-1)
+        # FIXME: Remove the predefined graph structure
+        #g = Graph([[2,3],[1,3],[1,2,4,5],[3,5],[3,4,6],[5]])
+        # set entries of edges not in G(V,E) to zero
+        for i = 2:n
+            for j = 1:i-1
+                if i != j
+                    if !in(j,g.adjacencyList[i])
+                        X[i,j] = 0
+                        X[j,i] = 0
+                    end
                 end
             end
         end
 
-        A = cvx.spmatrix(x,(I...),(J...))
+        return X,g
 
-        symb = chom.symbolic(A)
-        Asymb = chom.cspmatrix(symb)
-        W = chom.psdcompletion(Asymb)
-
-        (m,n) = W[:size]
-        F = zeros(m,n)
-
-        for i=1:m
-            for j=1:n
-                F[i,j] = W[i,j]
-            end
-        end
-        return F
     end
+
 end #Module

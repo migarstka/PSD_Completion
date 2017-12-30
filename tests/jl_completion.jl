@@ -16,7 +16,7 @@ rng = MersenneTwister(123554);
 dict = load("completableMatrices.jld")
 randomMatrices = dict["randomMatrices"]
 numberSaved = dict["numberSaved"]
-testM = [10 4 0 0 0 -4;4 10 -2 -2 0 -2;0 -2 12 8 0 0; 0 -2 8 9 -1 2; 0 0 0 -1 7 -4; -4 -2 0 2 -4 9]
+#testM = [10 4 0 0 0 -4;4 10 -2 -2 0 -2;0 -2 12 8 0 0; 0 -2 8 9 -1 2; 0 0 0 -1 7 -4; -4 -2 0 2 -4 9]
 
 @testset "Test positive semidefinite completion" begin
 
