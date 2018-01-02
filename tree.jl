@@ -173,21 +173,23 @@ module TreeModule
     # ordering defines a topological ordering of the representative vertices in the supernodal elimination tree, i.e.
     # v <_rho q(v) if v is a representative vertex and q(v) is the parent of v in the supernodal elimination tree
     function postOrdering!(ct::Tree,superTree::Tree,g::Graph)
-        ct.order = zeros(Int64,numberOfCliques(ct))
-        ct.reverseOrder = zeros(Int64,numberOfCliques(ct))
-        repVertices = Int64[]
-        for clique in ct.nodes
-            push!(repVertices,clique.value_btm[1])
-        end
-        vertexOrdering = copy(g.ordering)
-        for iii = 1:numberOfCliques(ct)
-            orderInd = indmin(vertexOrdering[repVertices])
-            ct.order[orderInd] = iii
-            ct.reverseOrder[iii] = orderInd
-            vertexOrdering[repVertices[orderInd]] = numberOfCliques(ct) + 1
-        end
 
-        # also try to sort the
+        ct.reverseOrder = collect(1:numberOfCliques(ct))
+        ct.order = collect(numberOfCliques(ct):-1:1)
+        # ct.order = zeros(Int64,numberOfCliques(ct))
+        # ct.reverseOrder = zeros(Int64,numberOfCliques(ct))
+        # repVertices = Int64[]
+        # for clique in ct.nodes
+        #     push!(repVertices,clique.value_btm[1])
+        # end
+        # vertexOrdering = copy(g.ordering)
+        # for iii = 1:numberOfCliques(ct)
+        #     repvertex = ct.nodes.value_btm[1]
+
+        #     orderInd = indmin(vertexOrdering[repVertices])
+        #     ct.order[orderInd] = iii
+        #     vertexOrdering[repVertices[orderInd]] = numberOfCliques(ct) + 1
+        # end
 
         return nothing
 
