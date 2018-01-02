@@ -5,10 +5,11 @@ include("../helper.jl")
 
 using GraphModule, TreeModule,Helper, Base.Test
 
-rng = MersenneTwister(123554);
+rng = MersenneTwister(222);
+
 
 # Define number of test matricesw
-nn = 10000
+nn = 1000
 
 @testset "Test Random Positive Definite Symmetric Matrix Generator" begin
 
@@ -18,6 +19,10 @@ nn = 10000
 
       @test isposdef(X) == true
       @test X == X'
+
+      # check nonzero diagonals
+        numDiagZeros = size(find(i->X[i,i] == 0,1:dim),1)
+        @test numDiagZeros == 0
     end
 
 end

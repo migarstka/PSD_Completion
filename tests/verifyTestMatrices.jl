@@ -9,8 +9,8 @@ using Base.Test, chomWrap, JLD
 dict = load("completableMatrices.jld")
 randomMatrices = dict["randomMatrices"]
 numberSaved = dict["numberSaved"]
-#testM = [10 4 0 0 0 -4;4 10 -2 -2 0 -2;0 -2 12 8 0 0; 0 -2 8 9 -1 2; 0 0 0 -1 7 -4; -4 -2 0 2 -4 9]
 
+verifiedMatrizes = []
 @testset "Test positive semidefinite completion" begin
 
     for iii=1:numberSaved
@@ -22,11 +22,17 @@ numberSaved = dict["numberSaved"]
         A = randomMatrices[iii]
 
         # create graph from A and make Graph chordal
-        W = completeChompack(A)
+        W,symb,E = completeChompack(A)
 
-        @test isposdef(W) == true
-
+        #@test isposdef(W) == true
+        if isposdef(W)
+            push!(verifiedMatrizes,A)
+        end
     end
 end
 
 
+
+# save to JLD file
+filename = "verifiedMatrizes.jld"
+JLD.save(filename, "verifiedMatrizes", verifiedMatrizes)

@@ -5,11 +5,12 @@ module Helper
 
     function generatePosDefMatrix(n::Int64,rng)
         # FIXME: Remove the range
-        X = rand(rng,-2.0:1.0:2.0,n,n)
+        #X = rand(rng,-2.0:1.0:2.0,n,n)
+        X = rand(rng,n,n)
         # make sure the diagonals are unequal to zero
         for iii = 1:n
             if X[iii,iii] == 0.0
-                X[iii,iii] = rand(rng,[-2.0,-1.0,1.0,2.0])
+                X[iii,iii] = rand(rng,0.1:1e-2:1)
             end
         end
         #X = 0.5*(X*X')
@@ -53,7 +54,7 @@ module Helper
         # - generate a full positive definite matrix
         # - create a chordal graph with matching density
         # - delete entries that are not considered in the graph
-        # - resulting matrix should be positive definite
+        # - resulting matrix should be positive definite completable
 
         # create a full symmetric positive definite matrix of size n
         X = generatePosDefMatrix(n,rng)

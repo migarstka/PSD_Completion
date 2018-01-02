@@ -40,7 +40,7 @@ module TreeModule
 
 # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::Tree)
-    println(io,"\nTree - Nodes:\nRoot: $(obj.root)\n")
+    println(io,"\nTree - Nodes:\nRoot: $(obj.root)\nOrder: $(obj.order)\n reverseOrder: $(obj.reverseOrder)")
     for node in obj.nodes
         println("Node - Value_top: $(node.value_top), Value_btm: $(node.value_btm), Degree: $(node.degree), Parent: $(node.parent), Children: $(node.children), inSuperNode: $(node.inSuperNode)\n")
     end

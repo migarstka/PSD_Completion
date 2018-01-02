@@ -1,32 +1,22 @@
-# Test constructors of graph type
+# Test file to find out why the testMatrix in testMatrix.jld cant be completed by my algorithm
+# Ovservations:
+# - Only filled 0 and sometimes even overwritten nonzero entries
 
 workspace()
 include("../graph.jl")
 include("../tree.jl")
 include("../helper.jl")
 include("../completion.jl")
+include("../chompack_wrapper.jl")
 
-using GraphModule, Base.Test, TreeModule, Helper, Completion
+using GraphModule, Base.Test, TreeModule, Helper, Completion,JLD,chomWrap
 
-rng = MersenneTwister(123554);
+dict = load("testMatrix.jld")
+A = dict["A"]
 
-
-#g = Graph([[2, 4, 5,7], [1,6,8], [4,5,7], [1,3,6], [1,3,6], [2,4,5], [1,3,8], [2,7]])
-
-# create random completable matrix
- A, B = generateCompleatableMatrix(8,0.1,rng)
-# create graph from A and make Graph chordal
- # generate graph
-g = Graph(A)
-# find perfect ordering and generate relevant trees to obtain clique tree
-mcsmSearch!(g)
-elimTree = createTreeFromGraph(g)
-superNodeElimTree = createSupernodeEliminationTree(elimTree,g)
-cliqueTree = createCliqueTree(superNodeElimTree,g)
-N = numberOfCliques(cliqueTree)
-
-W = copy(A)
-
-
-
-
+W,g = psdCompletion(A)
+Q,symb,E = completeChompack(A)
+@testset "test" begin
+    @test isposdef(W) == true
+    @test isposdef(Q) == true
+end

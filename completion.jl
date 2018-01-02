@@ -6,7 +6,7 @@ module Completion
     # - Apply Permutation A[p,p] reordering of rows and columns of A
     # - complete matrix and reverse the reordering operation again
     function psdCompletion(A)
-        doPrint = true
+        doPrint = false
         # generate graph
         g = Graph(A)
         # find perfect ordering and generate relevant trees to obtain clique tree
@@ -17,16 +17,17 @@ module Completion
         Nc = numberOfCliques(cliqueTree)
         N = numberOfVertices(g)
         # get permutation vector p and compute inverse permutation vector ip
-        p = g.ordering
+        p = g.reverseOrder
         ip = zeros(Int64,length(p))
         ip[p] = 1:length(p)
 
         # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
         # permutate matrix based on ordering p (p must be a vector type)
-
+        # TODO: What happens if by permutating you end up with a zero on the diagonal
         W = A[p,p]
         # loop through supernodes in inverse topological  order (order of representative vertex) (i.e. fill W from bottom right to top left)
-
+        counterA = 0
+        counterB = 0
         for j=(Nc-1):-1:1
             doPrint && println(">>> j = $(j) current W:")
             doPrint && @show(W)
@@ -49,12 +50,13 @@ module Completion
             # try factorization first (if matrix has full rank)
             Waa = W[α,α]
             if (rank(Waa) == size(α,1) )
-
+                counterA+=1
                 doPrint && println("Full Rank factorization with W[α,α]=$(W[α,α]), W[α,ν]=$(W[α,ν])")
                 Y = Waa\W[α,ν]
                 W[η,ν] =  W[η,α] * Y
             else
                 doPrint && println("SVD factorization with W[α,α]=$(W[α,α]), W[α,ν]=$(W[α,ν])")
+                counterB+=1
 
                 # otherwise use eigenvalue decomposition to compute pseudo inverse
                 F = eigfact(Waa)
@@ -79,7 +81,7 @@ module Completion
 
         # invert the permutation
         W = W[ip,ip]
-
+        println("$(counterA) Full rank factorizations, $(counterB) SVD factorizations")
         return W,g,superNodeElimTree, cliqueTree
     end
 

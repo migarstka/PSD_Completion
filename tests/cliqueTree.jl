@@ -59,6 +59,7 @@ end
 function checkCliques(ct::Tree,g::Graph)
     for node in ct.nodes
         clique = node.value_btm
+        clique = union(clique,node.value_top)
         if size(clique,1) > 1
             for v in clique
                 otherNodes = filter(x->x!=v,clique)
