@@ -1,5 +1,5 @@
 module GraphModule
-export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findParent, isPerfectOrdering, isConnected
+export Graph, numberOfVertices,mcsSearch!, mcsmSearch!, findHigherNeighbors, findParent, isPerfectOrdering, isConnected
 
 
     # -------------------------------------
@@ -8,11 +8,11 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
     # TODO: Rename attributes in a more consistent way
     type Graph
         adjacencyList::Array{Array{Int64,1}}
-        ordering::Array{Int64} # σ(v)
+        ordering::Array{Int64} # σ(v) = i
         reverseOrder::Array{Int64} #σ^(-1)(i)
 
          #constructor for adjacencylist input
-        function Graph(adjacencyList::Array)
+        function Graph(adjacencyList::Array{Array{Int64,1}})
             ordering = collect(1:size(adjacencyList,1))
             g = new(adjacencyList,ordering)
 
@@ -41,9 +41,9 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
                     end
                 end
             end
-            g = new(adjacencyList,ordering)
+            g = new(adjacencyList,ordering,[])
             # make sure that the graph is connected
-            connectGraph(g)
+            connectGraph!(g)
             return g
         end
 
@@ -71,8 +71,8 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
                         end
                 end
             end
-            g = new(adjacencyList,ordering)
-            connectGraph(g)
+            g = new(adjacencyList,ordering,[])
+            connectGraph!(g)
             return g
         end
 
@@ -81,7 +81,20 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
     # -------------------------------------
     # FUNCTION DEFINITIONS
     # -------------------------------------
-    function numberOfVertizes(g::Graph)
+
+    # Redefinition of the show function that fires when the object is called
+      function Base.show(io::IO, obj::Graph)
+        println(io,"\nGraph:\nAdjacency List:\n")
+        for i=1:size(obj.adjacencyList,1)
+            println(io,"Vertex $(i): $(obj.adjacencyList[i])")
+        end
+        println(io,"\nOrdering σ(v) = i: $(obj.ordering)")
+        println(io,"Reverse Ordering σ^-1(i) = v: $(obj.reverseOrder)\n")
+
+      end
+
+
+    function numberOfVertices(g::Graph)
         return size(g.ordering,1)
     end
 
@@ -103,8 +116,8 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
 
 
     # performs a maximum cardinality search and updates the ordering to the graph (only perfect elim. ordering if graph is chordal)
-    function mcsSearch(g::Graph)
-        N = numberOfVertizes(g)
+    function mcsSearch!(g::Graph)
+        N = numberOfVertices(g)
         weights = zeros(N)
         unvisited = ones(N)
         perfectOrdering = zeros(N)
@@ -132,40 +145,45 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
     end
 
     # implementation of the MCS-M algorithm (see. A. Berry - Maximum Cardinality Search for Computing Minimal Triangulations of Graphs) that finds a minimal triangulation
-    function mcsmSearch(g::Graph)
+    function mcsmSearch!(g::Graph)
+        doPrint = false
         # initialize edge set F of fill-in edges
-        F = []
-        N = numberOfVertizes(g)
-        weights = zeros(N)
-        unvisited = ones(N)
-        perfectOrdering = zeros(N)
-        paths = [] #saves for each vertex the paths that were tried
+        F = Array{Int64}[]
+        N = numberOfVertices(g)
+        weights = zeros(Int64,N)
+        unvisited = ones(Int64,N)
+        perfectOrdering = zeros(Int64,N)
         for i = N:-1:1
             # find unvisited vertex of maximum weight
             unvisited_weights = weights.*unvisited
             v = indmax(unvisited_weights)
             perfectOrdering[v] = i
-            unvisited[v] = 0
-            #println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
-            # find all unvisited vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
+
+            doPrint && println(" >>> Pick next vertex: v = $(v) and assign order i=$(i)\n")
+            # find all unvisited Vertices u with a path u, x1, x2, ..., v in G, s.t. w(xi) < w(u) and put them in set S
             # in the first step there will be no valid path, therefore choose S to be the direct neighbors
+            S = zeros(N)
             if i == N
-                S = filter(j->unvisited[j]==1,g.adjacencyList[v])
+                S[g.adjacencyList[v]] = 1
             else
-                anchestors = [v]
-                S = Array{Int64}[]
-                S = reachableVertices(S,g,v,1,copy(unvisited),weights,anchestors)
-               # println("S=$(S) of vertex $(v)")
+                if i > 1
+                    doPrint && println(" Dijkstra Search: v = $(v),  copy(unvisited)=$(copy(unvisited)),weights=$(weights)\n")
+                    S = dijkstra(g,v,copy(unvisited),weights,N)
+                    doPrint && println("S=$(S) of vertex $(v)\n")
+                else
+                    S = zeros(N)
+                end
             end
-            # increment weight of all vertices w and if w and v are no direct neighbors, add edges to F
-            for w in S
+            unvisited[v] = 0
+            # increment weight of all Vertices w and if w and v are no direct neighbors, add edges to F
+            #weights[v] = 100
+            for w in find(x->x == 1,S)
                 weights[w]+=1
                 if !in(w,g.adjacencyList[v])
                     push!(F,[w,v])
                 end
             end
         end
-
         # update ordering of graph
         g.ordering = perfectOrdering
         # also compute reverse order σ^-1(v)
@@ -184,92 +202,70 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
         return nothing
     end
 
-    function reachableVertices(r, g,v,depth,unvisited,weights,anchestors)
-        # initialize set of reachable vertices (direct or indirect neighbors)
-        # n: neighbors of v
+    # modified dijkstra algorithm to find for each vertex the minimum distance to v, where minimum distance means:
+    # - if one vertex on the path has been visited the distance will be set reasonably high
+    # - minimum distance is w = min(max(weight(x_i))) for all x_i in w,x1,x2,...,v
+    function dijkstra(g::Graph,v::Int64,unvisited::Array{Int64,1},weights::Array{Int64,1},N::Int64)
         doPrint = false
-        doPrint && println("    "^depth * "reachableVertices(v=$(v),depth=$(depth),unvisited=$(unvisited),weights=$(weights))\n")
-        unvisitedNeighbors = filter(i->unvisited[i]==1,g.adjacencyList[v])
-        if size(unvisitedNeighbors,1) == 0
-            doPrint && println("    "^depth *"End reached at vertex $(v)\n")
-            return r
-        end
-
-
-        # TODO: Check if necessary to sort neighbors
-        # sort unvisitedNeighbors based on their weight
-        sort!(unvisitedNeighbors, by=x->weights[x])
-        doPrint &&  println("    "^depth *"before unvisitedNeighbors=$(unvisitedNeighbors), r=$(r)\n")
-
-        # only visit neighbors that havent been added to r yet
-        filter!(f->!in(f,r),unvisitedNeighbors)
-
-        # direct unvisited neighbors are always added
-        if depth == 1
-            r = vcat(r,unvisitedNeighbors)
-        end
-
-
-
-        doPrint &&  println("    "^depth *"after unvisitedNeighbors=$(unvisitedNeighbors)\n")
-
-        for w in unvisitedNeighbors
-            doPrint &&  println("    "^depth *"Check w=$(w) of v=$(v), weights(w)=$(weights[w]),weights(v)=$(weights[v])\n")
-
-            # check again here since might been already checked at a lower depth, i.e. unvisited variable was modified
-            unvisited[w] = 0
-
-            # case that we have a sequence w(xi) < w(w), w(target)
-            if depth > 1
-                doPrint &&  println("    "^depth *"validpath before w=$(w), weights(w)=$(weights[w]),anchestors=$(anchestors)\n")
-                if validPath(w,weights,anchestors)
-                    # prevent adding a vertex twice if he has two valid paths
-                    if !in(w,r)
-                        push!(r,w)
+        distance = Inf*ones(Int64,N)
+        distance[v] = 0
+        weights[v] = 0
+        nodes = collect(1:N)
+        # loop over all Vertices
+        for iii = 1:N
+            unvisitedNodes = filter(x->x !=-1,nodes)
+            # pick unprocessed vertex with lowest distance-value
+            u = unvisitedNodes[indmin(distance[unvisitedNodes])] #simplify!!!
+            # dont bother with Vertices that already have an order
+            if unvisited[u] == 1
+                doPrint && println("--dijkstra:1,   iii=$(iii),Pick new: u=$(u) of distance=$(distance), unvisited=$(unvisited)\n")
+                nodes[u] = -1 #flag that indicates that node has been visited
+                doPrint && println("--dijkstra:2, Delete u: nodes=$(nodes), neighbors=$(g.adjacencyList[u])\n")
+                # loop over all unvisited neighbors of u
+                for w in g.adjacencyList[u]
+                    doPrint && println("--dijkstra:3, Loop through neighbors of u=$(u):  w=$(w) isinUnvisited?=$(in(w,nodes))\n")
+                    if nodes[w] != -1
+                        distanceUpdate(w,u,distance,weights,unvisited,N)
                     end
                 end
-            end
-
-            # else
-            #     if depth > 1 #or maybe > 2, means we tried this particular path for this vertex
-            #         push!(paths[v],anchestors)
-            #     end
-            #end
-            # sequence of vertices to reach w
-            anchestorsOfW = copy(anchestors)
-            push!(anchestorsOfW,w)
-            doPrint && println("    "^depth *"in, r=$(r), w=$(w), unvisited=$(unvisited)\n")
-            r = reachableVertices(r,g,w,depth+1,copy(unvisited),weights,anchestorsOfW)
-            doPrint && println("    "^depth *"out, r=$(r)\n")
-        end
-        return r
-    end
-
-    function validPath(w::Int64,weights::Array{Float64},anchestors::Array{Int64})
-        # trivial case of direct neighbor
-        if size(anchestors,1) == 1
-            return true
-
-        # check condition max(w(xi)) < w(w),w(v) for a path w,x1,x2,...,v
-        else
-            v = anchestors[1]
-            xs = anchestors[2:end]
-            maxWeight = maximum(weights[xs])
-            #println("    "^size(anchestors,1) *"v=$(v), weights(w)=$(weights[w]), xs=$(xs), maxWeight=$(maxWeight)\n")
-
-            if weights[w] > maxWeight && weights[v] > maxWeight
-                return true
             else
-                return false
+                nodes[u] = -1
             end
         end
 
+        # indicate with set S the Vertices that have a higher own weight than distance (flag set to 1)
+        S=zeros(N)
+        doPrint && println("--dijkstra:4,  Decide which S to add to S: weights=$(weights) distance=$(distance)\n")
+        # direct neighbors are always added to S
+        S[filter(x->unvisited[x] == 1,g.adjacencyList[v])]=1
+        for u in find(x->x == 1, unvisited)
+            if weights[u] > distance[u]
+                S[u] = 1
+            end
+        end
+        doPrint && ("--dijkstra:5,  S=$(S)")
+        return S
+    end
+
+    function distanceUpdate(w::Int64,u::Int64,distance::Array{Float64,1},weights::Array{Int64,1},unvisited::Array{Int64,1},N::Int64)
+        doPrint = false
+        doPrint && println("     --distanceUpdate:1, In: w=$(w) of u=$(u), distance[w]=$(distance[w]), distance[u]=$(distance[u]), weights[u]=$(weights[u])\n")
+        # if the vertex has already an order from a previous run of dijkstra() it can't be used as a valid path, hence make the distance reasonably high, ie. d=N
+        if unvisited[w] == 1
+            alternative = max(distance[u],weights[u])
+        else
+            alternative = N
+        end
+        if alternative < distance[w]
+            distance[w] = alternative
+        end
+        doPrint && println("     --distanceUpdate:1, New distances of w=$(w) of u=$(u) distance[w]=$(distance[w])\n")
     end
 
 
-    # returns lists of vertices that form the unconnected subgraphs (breath-first-search style)
+    # returns lists of Vertices that form the unconnected subgraphs (breath-first-search style)
     function getConnectedParts(g::Graph)
-        N = numberOfVertizes(g)
+        N = numberOfVertices(g)
         subgraphs = []
         visited = zeros(N)
         allVisited = false
@@ -291,10 +287,10 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
                 end
                 frontier = nextFrontier
             end
-            # add vertices of subgraph to array
+            # add Vertices of subgraph to array
             push!(subgraphs,visitedNodes)
 
-            # if all vertices are processed break
+            # if all Vertices are processed break
             if !in(0,visited)
                 allVisited = true
             end
@@ -303,7 +299,7 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
     end
 
     # connects an unconnected graph by adding edges
-    function connectGraph(g::Graph)
+    function connectGraph!(g::Graph)
         subgraphs = getConnectedParts(g)
 
         # if more than one subgraph are found, add one edge between the first node of each subgraph
@@ -323,6 +319,7 @@ export Graph, numberOfVertizes,mcsSearch, mcsmSearch, findHigherNeighbors, findP
     function isConnected(g::Graph)
         return size(getConnectedParts(g),1) == 1
     end
+
     # check if the ordering of the graph is a perfect elimination ordering (i.e. for every v, are all higher neighbors adjacent?)
     # start with lowest-order vertex v, find lowest neighbor u of v with higher order. Then verify that w is adjacent to all higher order neighbors of v
     # Algorithm has running time O(m+n)
