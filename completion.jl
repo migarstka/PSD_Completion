@@ -1,10 +1,11 @@
+# Main Module that implements the psdCompletion Algorithm
 module Completion
     using GraphModule, TreeModule
     export psdCompletion
 
-    # TODO: Check if the order is correct
-    # - Apply Permutation A[p,p] reordering of rows and columns of A
-    # - complete matrix and reverse the reordering operation again
+    # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
+    # input: A - positive definite completable matrix
+    # output: positive definite completion of A
     function psdCompletion(A)
         doPrint = false
         # generate graph
@@ -16,22 +17,21 @@ module Completion
         cliqueTree = createCliqueTree(superNodeElimTree,g)
         Nc = numberOfCliques(cliqueTree)
         N = numberOfVertices(g)
-        # get permutation vector p and compute inverse permutation vector ip
+        # get permutation vector p and compute inverse permutation vector ip, the permutation reorders the rows and columns
+        # according to the order of the graph vertices, i.e. if vertex one has order four, the first row and column are moved to the fourth row and column
         p = g.reverseOrder
         ip = zeros(Int64,length(p))
         ip[p] = 1:length(p)
 
-        # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
         # permutate matrix based on ordering p (p must be a vector type)
-        # TODO: What happens if by permutating you end up with a zero on the diagonal
         W = A[p,p]
-        # loop through supernodes in inverse topological  order (order of representative vertex) (i.e. fill W from bottom right to top left)
-        counterA = 0
-        counterB = 0
+        # loop through supernodes in inverse topological order (order of representative vertex) (i.e. fill W from bottom right to top left)
         for j=(Nc-1):-1:1
             doPrint && println(">>> j = $(j) current W:")
             doPrint && @show(W)
             node = cliqueTree.nodes[cliqueTree.reverseOrder[j]]
+
+            # in order to obtain ν, α the vertex numbers of the supernode are mapped to the new position of the permuted matrix
             # index set of snd(i) sorted using the numerical ordering i,i+1,...i+ni
             ν = g.ordering[node.value_btm]
             # index set containing the elements of col(i) \ snd(i) sorted using numerical ordering σ(i)
@@ -40,23 +40,19 @@ module Completion
             i = ν[end]
             η = collect(i+1:1:N)
             doPrint && println("Node=$(node)\nν=$(ν)\nα=$(α)\ni=$(i)\nη_before=$(η)")
-
             # filter out elements in lower triangular part of column i that are non-zero
             filter!(x -> !in(x,α),η)
 
             doPrint && println("η_filtered = $(η)")
-            # FIXME: Should be already appropriately sorted
-            #sort!(η, by=x->g.ordering[x])
+            # Investigate: It seems like it always has full rank and eigenvalue decomposition is never used
             # try factorization first (if matrix has full rank)
             Waa = W[α,α]
             if (rank(Waa) == size(α,1) )
-                counterA+=1
                 doPrint && println("Full Rank factorization with W[α,α]=$(W[α,α]), W[α,ν]=$(W[α,ν])")
                 Y = Waa\W[α,ν]
                 W[η,ν] =  W[η,α] * Y
             else
                 doPrint && println("SVD factorization with W[α,α]=$(W[α,α]), W[α,ν]=$(W[α,ν])")
-                counterB+=1
 
                 # otherwise use eigenvalue decomposition to compute pseudo inverse
                 F = eigfact(Waa)
@@ -81,8 +77,7 @@ module Completion
 
         # invert the permutation
         W = W[ip,ip]
-        println("$(counterA) Full rank factorizations, $(counterB) SVD factorizations")
-        return W,g,superNodeElimTree, cliqueTree
+        return W
     end
 
 end # MODULE

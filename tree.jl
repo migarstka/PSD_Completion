@@ -30,9 +30,7 @@ module TreeModule
         nodes::Array{Node}
         order::Array{Int64}
         reverseOrder::Array{Int64}
-         #constructor
-
-
+        #constructor
         function Tree()
             new(0,Int64[],Int64[],Int64[])
         end
@@ -54,7 +52,6 @@ module TreeModule
      function numberOfCliques(ct::Tree)
         return size(ct.nodes,1)
     end
-
 
 
     function createTreeFromGraph(g::Graph)
@@ -138,6 +135,7 @@ module TreeModule
         end
         return -1
     end
+
     # FIXME: The roots
     # takes as input a SupernodeEliminationTree and turns it into a clique tree (s. Vandenberghe, Chordal Graphs and SDO, p.287)
     function createCliqueTree(t::Tree,g::Graph)
@@ -162,36 +160,12 @@ module TreeModule
             push!(cliqueTree.nodes,node)
         end
 
-        # TODO: Enumerate the supernodes in descending order for algorithm to work
-        # order of col(v) \ snd(v) should match that of snd(v)
-        postOrdering!(cliqueTree,t,g)
-
+        # Order the supernodes in descending order for algorithm to work
+        cliqueTree.reverseOrder = collect(1:numberOfCliques(cliqueTree))
+        cliqueTree.order = collect(numberOfCliques(cliqueTree):-1:1)
 
         return cliqueTree
     end
-    # consecutive ordering of vertices in snd(v)
-    # ordering defines a topological ordering of the representative vertices in the supernodal elimination tree, i.e.
-    # v <_rho q(v) if v is a representative vertex and q(v) is the parent of v in the supernodal elimination tree
-    function postOrdering!(ct::Tree,superTree::Tree,g::Graph)
 
-        ct.reverseOrder = collect(1:numberOfCliques(ct))
-        ct.order = collect(numberOfCliques(ct):-1:1)
-        # ct.order = zeros(Int64,numberOfCliques(ct))
-        # ct.reverseOrder = zeros(Int64,numberOfCliques(ct))
-        # repVertices = Int64[]
-        # for clique in ct.nodes
-        #     push!(repVertices,clique.value_btm[1])
-        # end
-        # vertexOrdering = copy(g.ordering)
-        # for iii = 1:numberOfCliques(ct)
-        #     repvertex = ct.nodes.value_btm[1]
 
-        #     orderInd = indmin(vertexOrdering[repVertices])
-        #     ct.order[orderInd] = iii
-        #     vertexOrdering[repVertices[orderInd]] = numberOfCliques(ct) + 1
-        # end
-
-        return nothing
-
-    end
 end #MODULE

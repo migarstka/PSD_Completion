@@ -1,3 +1,5 @@
+# module that wraps the compack psdcompletion to make it easier to use in julia
+
 module chomWrap
     using PyCall
     @pyimport chompack as chom
@@ -5,8 +7,6 @@ module chomWrap
     @pyimport cvxopt as cvx
     @pyimport scipy.sparse as pysparse
     export completeChompack
-
-
 
     function completeChompack(A)
 

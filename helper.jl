@@ -4,8 +4,7 @@ module Helper
 
 
     function generatePosDefMatrix(n::Int64,rng)
-        # FIXME: Remove the range
-        #X = rand(rng,-2.0:1.0:2.0,n,n)
+
         X = rand(rng,n,n)
         # make sure the diagonals are unequal to zero
         for iii = 1:n
@@ -13,7 +12,6 @@ module Helper
                 X[iii,iii] = rand(rng,0.1:1e-2:1)
             end
         end
-        #X = 0.5*(X*X')
         X = (X*X')
 
         return X
@@ -65,8 +63,7 @@ module Helper
         A = full(Symmetric(A))
         g = Graph(A)
         mcsmSearch!(g)
-        # FIXME: Remove the predefined graph structure
-        #g = Graph([[2,3],[1,3],[1,2,4,5],[3,5],[3,4,6],[5]])
+
         # set entries of edges not in G(V,E) to zero
         for i = 2:n
             for j = 1:i-1
@@ -79,7 +76,7 @@ module Helper
             end
         end
 
-        return X,g
+        return X
 
     end
 

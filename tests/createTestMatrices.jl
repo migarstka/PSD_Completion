@@ -21,7 +21,7 @@ numberSaved = 0
 for iii = 1:nn
     dim = rand(rng,2:100)
     density = rand(rng,0.1:0.1:0.4)
-    A,g = generateCompleatableMatrix(dim,density,rng)
+    A = generateCompleatableMatrix(dim,density,rng)
     # if the randomly generated compleatable matrix is not posetive definite, save it
     if !isposdef(A)
       push!(randomMatrices,A)

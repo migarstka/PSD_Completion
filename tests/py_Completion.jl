@@ -1,8 +1,10 @@
-# workspace()
-# include("../graph.jl")
-# include("../tree.jl")
+# Test file to play around with the chompack python library
 
-# using GraphModule, TreeModule
+workspace()
+include("../graph.jl")
+include("../tree.jl")
+
+using GraphModule, TreeModule
 
 # load reference functions from python chompack package
 using PyCall, Base.Test
@@ -73,5 +75,6 @@ for i=1:m
         F[i,j] = W[i,j]
     end
 end
-
+# symb[:cliques]()
+# symb[:supernodes]()
 #@test isposdef(F)
