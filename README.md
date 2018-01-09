@@ -1,8 +1,7 @@
 # Positive Semidefinite Completion Routine
 
-In a positive semideﬁnite completion problem, one wants to fill in the entries of a partially specified dense matrix A
-The diagonal entries A[ii] and the off-diagonal entries A[ij] with {i,j} ∈ E are ﬁxed, the other entries are free. The provided routine can find
-values for the free entries that make the matrix A positive semidefinite.
+In a positive semideﬁnite completion problem, one wants to fill in the entries of a partially specified dense matrix A.
+The diagonal entries A[ii] and the off-diagonal entries A[ij] with {i,j} ∈ E are ﬁxed, the other entries are free. The provided routine can find values for the free entries that make the matrix A positive semidefinite.
 
 ## Getting Started
 
@@ -19,7 +18,7 @@ The code is written for Julia v0.6.
 - Include the completion, tree and graph module into your project.
 - Use psdCompletion() to complete your matrix A
 
-```
+```julia
 workspace()
 include("graph.jl")
 include("tree.jl")
@@ -34,7 +33,7 @@ dim = 6
 density = 0.1
 A = generateCompleatableMatrix(dim,density,rng)
 
-# perform positive definite completion with own implementation
+# perform positive definite completion
 W = psdCompletion(A)
 
 # check if completed matrix is positive definite
@@ -48,13 +47,11 @@ W = psdCompletion(A)
 
 ## License
 
-This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## Acknowledgments
 
-* The code is based on the following work
-The implementation is based on the supernodal-multifrontal algorithms
-described in these papers:
+* The code is based on the following work:
       
       L. Vandenberghe and M. S. Andersen, `Chordal Graphs and 
       Semidefinite Optimization <http://seas.ucla.edu/~vandenbe/publications/chordalsdp.pdf>`_, *Foundations and Trends in Optimization*, 2015. [`doi <http://dx.doi.org/10.1561/2400000006>`__ | `bib <http://www.doi2bib.org/#/doi/10.1561/2400000006>`__ ]
